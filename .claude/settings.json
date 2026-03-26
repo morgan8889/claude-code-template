@@ -10,6 +10,8 @@
       "Bash(npm run typecheck*)",
       "Bash(npx tsc --noEmit*)",
       "Bash(npx biome *)",
+      "Bash(npm install*)",
+      "Bash(npm ci*)",
       "Bash(git push -u origin *)",
       "Bash(git checkout -b *)",
       "Bash(git switch -c *)",
