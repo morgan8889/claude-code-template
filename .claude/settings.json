@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx playwright*)",
+      "Bash(npm run test*)",
+      "Bash(npm run build*)",
+      "Bash(npm run dev*)",
+      "Bash(npm run lint*)",
+      "Bash(npm run format*)",
+      "Bash(npm run typecheck*)",
+      "Bash(npx tsc --noEmit*)",
+      "Bash(npx biome*)",
+      "Bash(npm install*)",
+      "Bash(npm ci*)"
+    ]
+  }
+}

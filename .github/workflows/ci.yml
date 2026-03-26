@@ -1,0 +1,30 @@
+# Skeleton CI pipeline — exact commands will be filled in when tech stack is chosen.
+# This should almost never fail if the local autonomous loop worked correctly.
+# If CI catches something local didn't, improve the local hooks/CLAUDE.md.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+
+      # E2E tests only on PRs to main (expensive)
+      - run: npm run test:e2e
+        if: github.event_name == 'pull_request'
