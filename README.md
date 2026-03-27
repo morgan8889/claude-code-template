@@ -1,20 +1,18 @@
 # Claude Code Project Template
 
-Reusable project scaffold with Claude Code autonomous governance, TDD pipeline, and CI.
+Reusable project scaffold with autonomous governance, TDD pipeline, review enforcement, and CI. Designed for fully autonomous Claude Code development with human oversight only at PR review.
 
 ## What's Included
 
-| Component | Tool | Purpose |
-|---|---|---|
-| Build | Vite | Dev server + production bundler |
-| Language | TypeScript | Type safety |
-| Lint/Format | Biome | Fast linter + formatter |
-| Unit tests | Vitest | Fast test runner |
-| E2E tests | Playwright | Browser automation |
-| Git hooks | Husky + lint-staged | Pre-commit quality gates |
-| CI | GitHub Actions | PR checks |
-| AI review | claude-code-action | @claude PR review + fixes |
-| Governance | CLAUDE.md + Constitution | Autonomous dev loop with TDD |
+| Layer | Components | Purpose |
+|-------|-----------|---------|
+| **Build** | Vite, TypeScript, Biome | Dev server, type safety, fast lint/format |
+| **Testing** | Vitest, Playwright, visual regression | Unit tests, E2E, screenshot baselines |
+| **Git hooks** | Husky, lint-staged | Pre-commit quality gates |
+| **Claude hooks** | 9 hooks (4 blocking, 5 informational) | Commit gate, circuit breaker, review enforcement, audit log |
+| **CI** | GitHub Actions | PR quality checks + E2E |
+| **AI review** | claude-code-action | Automatic PR review with inline comments |
+| **Governance** | CLAUDE.md, Constitution, Speckit | Autonomous dev loop with TDD + review enforcement |
 
 ## Quick Start
 
@@ -29,89 +27,198 @@ cd my-project
 
 ### 2. Customize placeholders
 
-Search and replace these in the codebase:
-
 | Placeholder | File(s) | Replace with |
 |---|---|---|
 | `[PROJECT_NAME]` | CLAUDE.md, constitution.md | Your project name |
-| `[PROJECT_DESCRIPTION]` | CLAUDE.md | One-line project description |
-| `[TARGET_USERS]` | constitution.md | Your target users (e.g., "small business owners") |
-| `[DOMAIN_DATA]` | constitution.md | Your core data types (e.g., "inventory records, pricing data") |
-| `my-project` | package.json | Your package name (kebab-case) |
+| `[PROJECT_DESCRIPTION]` | CLAUDE.md | One-line description |
+| `[TARGET_USERS]` | constitution.md | Your target users |
+| `[DOMAIN_DATA]` | constitution.md | Your core data types |
+| `my-project` | package.json | Your package name |
 | `My Project` | index.html | Your page title |
 
 ### 3. Install and verify
 
 ```bash
 npm install
-npm run typecheck    # TypeScript
-npm run lint         # Biome
-npm run test         # Vitest
-npm run build        # Vite production build
-npm run test:e2e     # Playwright (installs browser on first run)
+npm run typecheck       # TypeScript
+npm run lint            # Biome
+npm run test            # Vitest unit tests
+npm run test:coverage   # With coverage thresholds
+npm run build           # Vite production build
+npm run test:e2e        # Playwright E2E + visual regression
 ```
 
 ### 4. Set up GitHub
 
-Add `ANTHROPIC_API_KEY` to your repo secrets for the @claude review workflow:
-**Settings > Secrets and variables > Actions > New repository secret**
+1. Add `ANTHROPIC_API_KEY` to repo secrets (Settings > Secrets > Actions)
+2. Enable branch protection on `main`:
+   - Require CI to pass
+   - Require 1 approving review
+   - Dismiss stale reviews on push
 
 ### 5. Start building
 
 ```bash
-# Use speckit commands to drive the spec > plan > implement cycle:
 claude /speckit.specify    # Write feature spec
 claude /speckit.plan       # Design implementation
 claude /speckit.tasks      # Generate task list
 claude /speckit.implement  # Execute tasks with TDD
 ```
 
-## Pre-commit Hooks
+## Automation Architecture
 
-Every commit runs:
-1. **lint-staged** — Biome check + format on staged files
-2. **typecheck** — `tsc --noEmit`
-3. **unit tests** — `vitest run`
+### Hook Enforcement Chain
 
-## CI Pipeline
+```
+Implementation commit (feat:/fix:/refactor:)
+  --> post-commit-review.sh AUTO-QUEUES for review
+  --> review-enforcer.sh BLOCKS next task until reviews done
+  --> review-gate.sh BLOCKS PR until all review artifacts exist
 
-Runs on PRs to `main`:
-- `npm run lint`
-- `npm run typecheck`
-- `npm run test`
-- `npm run test:e2e`
+git commit (any)
+  --> verify-before-commit.sh BLOCKS unless tests/types/lint pass
+  --> Husky pre-commit runs lint-staged + typecheck + test
+
+Every Bash command
+  --> circuit-breaker.sh BLOCKS after 3 identical retries
+
+Every file edit
+  --> post-edit-format.sh auto-formats + invalidates pre-commit cache
+
+Every tool call
+  --> audit-log.sh logs to ~/.claude/audit/ (user-level only)
+```
+
+### 9 Hooks
+
+| Hook | Event | Blocks? | Purpose |
+|------|-------|---------|---------|
+| `verify-before-commit.sh` | PreToolUse | **Yes** | Tests, typecheck, lint, E2E before commit |
+| `circuit-breaker.sh` | PreToolUse | **Yes** | Prevents infinite retry loops |
+| `review-enforcer.sh` | PreToolUse | **Yes** | Blocks implementation until reviews done |
+| `review-gate.sh` | PreToolUse | **Yes** | Blocks PR without review artifacts |
+| `post-edit-format.sh` | PostToolUse | No | Auto-format with Biome |
+| `post-commit-review.sh` | PostToolUse | No | Queues impl commits for review |
+| `audit-log.sh` | PostToolUse | No | JSONL audit trail (user-level) |
+| `on-stop.sh` | Stop | Conditional | Prevents premature stop during autonomous work |
+| `notify.sh` | Notification | No | Desktop notification |
+
+### GitHub Workflows
+
+**CI** (`ci.yml`) — runs on PRs to main:
+- Biome lint
+- TypeScript type check
+- Vitest with coverage thresholds
+- Playwright E2E + visual regression
+
+**Claude Code** (`claude-review.yml`) — two jobs:
+- `auto-review`: runs on every PR, posts inline comments
+- `claude-respond`: runs on `@claude` mentions in comments
+
+### CLAUDE.md Autonomous Loop
+
+```
+Phase -1: PREFLIGHT   — enumerate blockers, signal session start
+Phase  0: ORIENT      — read spec/plan/tasks, identify next task
+Phase  1: RED         — write failing test
+Phase  2: GREEN       — minimum implementation
+Phase  3: REFACTOR    — improve clarity, stay green
+Phase  4: VERIFY      — full test suite + typecheck + lint + browser
+Phase  5: REVIEW      — spec review + quality review + simplifier (HOOK-ENFORCED)
+Phase  6: COMMIT      — atomic commit (pre-commit hooks run)
+Phase  7: PR          — final review + verification (HOOK-ENFORCED)
+```
+
+## Review Enforcement
+
+After every `feat:/fix:/refactor:` commit, the review hooks enforce:
+
+1. **post-commit-review.sh** creates `.reviews/pending/<sha>.pending`
+2. **review-enforcer.sh** blocks the next implementation command until:
+   - `.reviews/completed/<sha>-spec.md` exists (spec compliance review)
+   - `.reviews/completed/<sha>-quality.md` exists (code quality review)
+3. **review-gate.sh** blocks `gh pr create` until:
+   - All pending reviews completed
+   - `.reviews/completed/final-review.md` exists
+   - `.reviews/completed/final-simplifier.md` exists
+   - `.reviews/verification-pass.md` exists
+
+Infrastructure commits (`chore:`, or only touching `.claude/`, `.github/`, config files) skip the review queue.
+
+## Visual Regression
+
+Playwright `toHaveScreenshot()` tests tagged with `@visual`:
+
+```bash
+# Run visual tests
+npx playwright test --grep @visual
+
+# Update baselines after intentional UI changes
+npx playwright test --grep @visual --update-snapshots
+```
+
+Baselines stored in `screenshots/baseline/` (committed to git).
+
+The commit hook (`verify-before-commit.sh`) automatically runs visual regression when UI files are staged and baselines exist.
 
 ## Project Structure
 
 ```
 .claude/
-  commands/          # Speckit slash commands
-  settings.json      # Claude Code permissions
-.github/workflows/
-  ci.yml             # PR quality checks
-  claude-review.yml  # @claude AI review
+  commands/             # 9 speckit slash commands
+  hooks/                # 9 automation hooks
+  settings.json         # Permissions + hook configuration
+  HOOK_PROTOCOL.md      # Hook JSON format + upgrade checklist
+.github/
+  workflows/
+    ci.yml              # PR quality checks
+    claude-review.yml   # Automatic AI review
+  pull_request_template.md
 .husky/
-  pre-commit         # Git hooks
+  pre-commit            # lint-staged + typecheck + test
 .specify/
   memory/
-    constitution.md  # Project principles + quality gates
-  templates/         # Spec, plan, task templates
+    constitution.md     # Project principles + quality gates
+  templates/            # Spec, plan, task, checklist templates
+  scripts/              # Feature branch + prerequisite scripts
+screenshots/
+  baseline/             # Visual regression baselines
 src/
-  main.ts            # App entry point
-  main.test.ts       # Unit tests
+  main.ts               # App entry point
+  main.test.ts          # Unit tests
 e2e/
-  smoke.spec.ts      # E2E smoke test
-CLAUDE.md            # Autonomous dev loop instructions
+  smoke.spec.ts         # E2E smoke test
+  visual.spec.ts        # Visual regression tests
+CLAUDE.md               # Autonomous dev loop (9 phases)
 ```
+
+## Key Design Decisions
+
+### Advisory instructions get skipped
+
+CLAUDE.md text and skill conventions are advisory — Claude can and does skip them under pressure. Only **blocking hooks** (exit code 2) are reliable enforcement. That's why 4 of the 9 hooks are blocking.
+
+### Artifact-based > signal-based enforcement
+
+A "touch a pass file" pattern is gameable. The review hooks check for actual review content files that must be written by review subagents, not just signal files.
+
+### CI must mirror local environment
+
+If a feature needs environment variables (like API tokens), CI must set them too — even as placeholders. Otherwise E2E tests fail in CI but pass locally.
+
+### Version pins: tilde not caret
+
+Critical dependencies (Biome, Vite, Vitest, Mapbox) use `~` (patch-only updates) instead of `^` (minor updates) to prevent surprise breaking changes.
 
 ## Customizing the Stack
 
-The default stack (Vite + TS + Biome + Vitest + Playwright) is lightweight and fast. To swap components:
-
-1. Update `package.json` scripts to match your new tools
-2. Update `.claude/settings.json` permissions to allow the new commands
-3. Update `.husky/pre-commit` to run the right checks
-4. Update `.github/workflows/ci.yml` to match
+1. Update `package.json` scripts to match your tools
+2. Update `.claude/settings.json` permissions
+3. Update `.claude/hooks/verify-before-commit.sh` to run your checks
+4. Update `.claude/hooks/post-edit-format.sh` for your formatter
+5. Update `.husky/pre-commit` to match
+6. Update `.github/workflows/ci.yml` to match
+7. Review `.claude/HOOK_PROTOCOL.md` for hook format reference
 
 ## License
 
