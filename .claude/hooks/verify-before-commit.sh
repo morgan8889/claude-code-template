@@ -170,6 +170,21 @@ elif [ -f ".eslintrc.json" ] || [ -f ".eslintrc.js" ] || [ -f "eslint.config.js"
   echo "  Lint passed"
 fi
 
+# -- Screenshot Evidence (when UI files staged) --
+if [ "$SKIP_BROWSER_TESTS" = "false" ]; then
+  SCREENSHOTS_DIR="${REPO_ROOT}/.reviews/screenshots"
+  if [ ! -d "$SCREENSHOTS_DIR" ] || [ -z "$(find "$SCREENSHOTS_DIR" -name '*.png' -mmin -60 2>/dev/null | head -1)" ]; then
+    echo ""
+    echo "BLOCKED: UI files staged but no recent screenshots in .reviews/screenshots/"
+    echo "  Take a screenshot during browser verification before committing."
+    echo "  Use superpowers-chrome (real browser) not headless Playwright for WebGL content."
+    echo "  If screenshot is dark/blank, that IS the bug — investigate."
+    rm -f "$_LOG"
+    exit 2
+  fi
+  echo "  Screenshot evidence found"
+fi
+
 # -- E2E Tests (skip visual — run separately below) --
 # Guard: only run Playwright if a playwright config exists (avoids false triggers
 # in Python/non-JS projects that happen to have a tests/e2e/ directory).
