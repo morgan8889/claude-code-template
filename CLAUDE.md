@@ -1,9 +1,9 @@
-# Landscape Design — Claude Code Guidelines
+# Claude Code Project Template — Guidelines
 
 ## Project Identity
 
-- **What**: Browser-based landscape design app for homeowners
-- **Constitution**: `.specify/memory/constitution.md` (v1.0.0, ratified 2026-03-25)
+- **What**: [Describe your project here]
+- **Constitution**: `.specify/memory/constitution.md` — run `/speckit.constitution` to create
 - **Speckit commands**: `.claude/commands/speckit.*.md` drive the spec → plan → implement cycle
 - **Tech stack**: Deferred to first feature plan. These guidelines are framework-agnostic.
 
@@ -215,13 +215,15 @@ Before each commit:
 
 All work must comply with `.specify/memory/constitution.md`:
 
-1. **User-Centric Design**: Features validated against real homeowner needs
-2. **Data Accuracy**: Plant data referenced, spatial math validated, no silent coercion
+1. **User-Centric Design**: Features validated against real user needs
+2. **Data Accuracy**: Data referenced and validated, no silent coercion
 3. **Test-First**: Red-Green-Refactor mandatory
 4. **Incremental Delivery**: Each feature delivers standalone value with P1 MVP slice
 5. **Simplicity**: Simplest solution wins, YAGNI enforced
 
 Quality gates must pass before PR: Spec, Plan, Test, Data, Simplicity.
+
+> Update these principles after running `/speckit.constitution` for your project.
 
 ## Permission & Safety Rules
 
