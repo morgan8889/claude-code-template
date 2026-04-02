@@ -37,13 +37,19 @@ if [ -d "$PENDING_DIR" ]; then
   fi
 fi
 
-# Check for final review artifacts
+# Check for final review artifacts (must exist and contain valid review-signed header)
+HEAD_SHA=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null | head -c 12)
+
 if [ ! -f "${COMPLETED_DIR}/final-review.md" ]; then
   ERRORS="${ERRORS}\n- Missing final branch code review (.reviews/completed/final-review.md)"
+elif ! grep -q "^review-signed:" "${COMPLETED_DIR}/final-review.md" 2>/dev/null; then
+  ERRORS="${ERRORS}\n- final-review.md missing review-signed header (must be created by review subagent)"
 fi
 
 if [ ! -f "${COMPLETED_DIR}/final-simplifier.md" ]; then
   ERRORS="${ERRORS}\n- Missing final code-simplifier pass (.reviews/completed/final-simplifier.md)"
+elif ! grep -q "^review-signed:" "${COMPLETED_DIR}/final-simplifier.md" 2>/dev/null; then
+  ERRORS="${ERRORS}\n- final-simplifier.md missing review-signed header (must be created by review subagent)"
 fi
 
 if [ ! -f "${REVIEWS_DIR}/verification-pass.md" ]; then
@@ -51,7 +57,7 @@ if [ ! -f "${REVIEWS_DIR}/verification-pass.md" ]; then
 fi
 
 # Check for screenshot artifacts when UI files changed
-UI_FILES_IN_BRANCH=$(git diff --name-only main...HEAD 2>/dev/null | grep -E '(\.css|components/|src/app/|public/|src/style|src/main\.ts)' || true)
+UI_FILES_IN_BRANCH=$(git diff --name-only main...HEAD 2>/dev/null | grep -E '\.(css|html|svelte|vue|jsx|tsx)$|src/components/|src/app/|src/styles/' || true)
 if [ -n "$UI_FILES_IN_BRANCH" ] && [ ! -d "${REVIEWS_DIR}/screenshots" ]; then
   ERRORS="${ERRORS}\n- UI files changed but no browser verification screenshots (.reviews/screenshots/)"
 fi

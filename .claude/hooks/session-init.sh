@@ -29,7 +29,7 @@ CONTEXT_PARTS=""
 
 # Check for in-progress or pending tasks
 if [ -n "$CURRENT_SPEC" ]; then
-  TASK=$(grep -m1 -E '\[[ x]\].*in_progress|\[ \]' "$CURRENT_SPEC/tasks.md" 2>/dev/null || true)
+  TASK=$(grep -m1 -E '\[ \].*in_progress|\[ \]' "$CURRENT_SPEC/tasks.md" 2>/dev/null || true)
   if [ -n "$TASK" ]; then
     SPEC_NAME=$(basename "$CURRENT_SPEC")
     CONTEXT_PARTS="Current spec: ${SPEC_NAME}. Next task: ${TASK}."
@@ -58,9 +58,15 @@ fi
 
 # Output context if we found anything useful
 if [ -n "$CONTEXT_PARTS" ]; then
-  # Escape for JSON
-  CONTEXT_PARTS=$(printf '%s' "$CONTEXT_PARTS" | sed 's/"/\\"/g' | tr '\n' ' ')
-  echo "{\"additionalContext\": \"Session ${SOURCE}. ${CONTEXT_PARTS} Resume the autonomous development loop from CLAUDE.md Phase 0.\"}"
+  # Build JSON safely
+  MSG="Session ${SOURCE}. ${CONTEXT_PARTS} Resume the autonomous development loop from CLAUDE.md Phase 0."
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$MSG" | jq -Rs '{additionalContext: .}'
+  else
+    # Fallback: escape backslashes, quotes, and control chars
+    ESCAPED=$(printf '%s' "$MSG" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')
+    echo "{\"additionalContext\": \"${ESCAPED}\"}"
+  fi
 fi
 
 exit 0
