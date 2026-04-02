@@ -130,6 +130,25 @@ Extract `PROJ-42` → `retrieve_work_item_by_identifier(project_identifier="PROJ
 
 ---
 
+## Hook-Driven Automation
+
+The automation hooks in `.claude/hooks/` inject Plane context at key lifecycle points.
+Claude reads these hints and makes the appropriate MCP calls guided by this skill.
+
+| Hook | Event | Plane Context Injected |
+|------|-------|----------------------|
+| `session-init.sh` | SessionStart | Detects `PROJ-N` from branch, prompts ticket state lookup |
+| `post-commit-review.sh` | After feat: commit | Prompts to add commit comment + mark child ticket Done |
+| `review-gate.sh` | PR gate passes | Prompts to link PR to parent ticket, move to In Review |
+| `on-stop.sh` | PR detected in output | Prompts to move parent ticket to Done |
+| `speckit.specify` | Feature spec created | Creates Plane project + parent ticket if MCP available |
+| `speckit.taskstoissues --plane` | Tasks generated | Creates child tickets from tasks.md |
+
+These hooks are additive — if Plane MCP is not configured, the hints are ignored.
+The hooks never call the Plane API directly; they only inject `additionalContext` JSON.
+
+---
+
 ## Superpowers Reference
 
 See `references/superpowers-hooks.md` for the complete hook trigger map, plan file format details, and edge cases.
