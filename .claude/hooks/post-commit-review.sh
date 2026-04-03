@@ -60,13 +60,21 @@ if [ -n "$COMMIT_SHA" ]; then
     PLANE_TICKET=$(echo "$CURRENT_BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
     if [ -n "$PLANE_TICKET" ]; then
       COMMIT_MSG=$(git -C "$REPO_ROOT" log -1 --format="%s" 2>/dev/null || true)
-      REVIEW_MSG="${REVIEW_MSG} PLANE ACTION: If Plane MCP is available, update ticket ${PLANE_TICKET} — add comment with commit ${COMMIT_SHA}: '${COMMIT_MSG}'. If this completes a child task, move it to Done and check if all siblings are done (move parent to In Review if so)."
+      # Safely escape commit message for JSON embedding
+      ESCAPED_MSG=$(printf '%s' "$COMMIT_MSG" | jq -Rs '.' 2>/dev/null | sed 's/^"//;s/"$//' || printf '%s' "$COMMIT_MSG" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g')
+      REVIEW_MSG="${REVIEW_MSG} PLANE ACTION: If Plane MCP is available, update ticket ${PLANE_TICKET} — add comment with commit ${COMMIT_SHA}: '${ESCAPED_MSG}'. If this completes a child task, move it to Done and check if all siblings are done (move parent to In Review if so)."
     fi
   fi
   if [ -n "${BRANCH_WARNING:-}" ]; then
     REVIEW_MSG="${REVIEW_MSG} ${BRANCH_WARNING}"
   fi
-  echo "{\"additionalContext\": \"${REVIEW_MSG}\"}"
+  # Use jq to safely encode the full message as a JSON string
+  if command -v jq &>/dev/null; then
+    echo "{\"additionalContext\": $(printf '%s' "$REVIEW_MSG" | jq -Rs '.')}"
+  else
+    SAFE_MSG=$(printf '%s' "$REVIEW_MSG" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g')
+    echo "{\"additionalContext\": \"${SAFE_MSG}\"}"
+  fi
 fi
 
 exit 0

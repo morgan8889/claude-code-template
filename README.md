@@ -208,7 +208,7 @@ If a feature needs environment variables (like API tokens), CI must set them too
 
 ### Version pins: tilde not caret
 
-Critical dependencies (Biome, Vite, Vitest, Mapbox) use `~` (patch-only updates) instead of `^` (minor updates) to prevent surprise breaking changes.
+Critical dependencies (Biome, Vite, Vitest) use `~` (patch-only updates) instead of `^` (minor updates) to prevent surprise breaking changes.
 
 ## Plane Integration (Optional)
 
