@@ -38,8 +38,6 @@ if [ -d "$PENDING_DIR" ]; then
 fi
 
 # Check for final review artifacts (must exist and contain valid review-signed header)
-HEAD_SHA=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null | head -c 12)
-
 if [ ! -f "${COMPLETED_DIR}/final-review.md" ]; then
   ERRORS="${ERRORS}\n- Missing final branch code review (.reviews/completed/final-review.md)"
 elif ! grep -q "^review-signed:" "${COMPLETED_DIR}/final-review.md" 2>/dev/null; then
