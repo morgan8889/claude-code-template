@@ -37,13 +37,17 @@ if [ -d "$PENDING_DIR" ]; then
   fi
 fi
 
-# Check for final review artifacts
+# Check for final review artifacts (must exist and contain valid review-signed header)
 if [ ! -f "${COMPLETED_DIR}/final-review.md" ]; then
   ERRORS="${ERRORS}\n- Missing final branch code review (.reviews/completed/final-review.md)"
+elif ! grep -q "^review-signed:" "${COMPLETED_DIR}/final-review.md" 2>/dev/null; then
+  ERRORS="${ERRORS}\n- final-review.md missing review-signed header (must be created by review subagent)"
 fi
 
 if [ ! -f "${COMPLETED_DIR}/final-simplifier.md" ]; then
   ERRORS="${ERRORS}\n- Missing final code-simplifier pass (.reviews/completed/final-simplifier.md)"
+elif ! grep -q "^review-signed:" "${COMPLETED_DIR}/final-simplifier.md" 2>/dev/null; then
+  ERRORS="${ERRORS}\n- final-simplifier.md missing review-signed header (must be created by review subagent)"
 fi
 
 if [ ! -f "${REVIEWS_DIR}/verification-pass.md" ]; then
@@ -51,7 +55,7 @@ if [ ! -f "${REVIEWS_DIR}/verification-pass.md" ]; then
 fi
 
 # Check for screenshot artifacts when UI files changed
-UI_FILES_IN_BRANCH=$(git diff --name-only main...HEAD 2>/dev/null | grep -E '(\.css|components/|src/app/|public/|src/style|src/main\.ts)' || true)
+UI_FILES_IN_BRANCH=$(git diff --name-only main...HEAD 2>/dev/null | grep -E '\.(css|html|svelte|vue|jsx|tsx)$|src/components/|src/app/|src/styles/' || true)
 if [ -n "$UI_FILES_IN_BRANCH" ] && [ ! -d "${REVIEWS_DIR}/screenshots" ]; then
   ERRORS="${ERRORS}\n- UI files changed but no browser verification screenshots (.reviews/screenshots/)"
 fi
@@ -80,5 +84,14 @@ REPO_HASH=$(printf '%s' "$REPO_ROOT" | md5 -q 2>/dev/null || printf '%s' "$REPO_
 SESSION_FILE="/tmp/claude-session-active-${REPO_HASH}"
 rm -f "$SESSION_FILE"
 touch "/tmp/claude-session-disarmed-${REPO_HASH}"
+
+# Hint to link PR to Plane ticket (requires PLANE_ENABLED=1)
+if [ "${PLANE_ENABLED:-}" = "1" ]; then
+  CURRENT_BRANCH=$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || true)
+  PLANE_TICKET=$(echo "$CURRENT_BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
+  if [ -n "$PLANE_TICKET" ]; then
+    echo "{\"additionalContext\": \"PLANE ACTION: After creating the PR, link it to Plane ticket ${PLANE_TICKET} using create_work_item_link. Move the parent ticket to In Review state.\"}"
+  fi
+fi
 
 exit 0

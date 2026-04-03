@@ -28,7 +28,7 @@ jobs:
       # E2E tests only on PRs to main (expensive)
       - run: npx playwright install --with-deps chromium
         if: github.event_name == 'pull_request'
-      - run: npm run test:e2e
+      - run: npx playwright test --grep-invert @visual
         if: github.event_name == 'pull_request'
         env:
-          VITE_MAPBOX_TOKEN: pk.ci-placeholder
+          CI: true

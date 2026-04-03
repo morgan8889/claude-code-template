@@ -29,7 +29,7 @@ CONTEXT_PARTS=""
 
 # Check for in-progress or pending tasks
 if [ -n "$CURRENT_SPEC" ]; then
-  TASK=$(grep -m1 -E '\[[ x]\].*in_progress|\[ \]' "$CURRENT_SPEC/tasks.md" 2>/dev/null || true)
+  TASK=$(grep -m1 -E '\[ \].*in_progress|\[ \]' "$CURRENT_SPEC/tasks.md" 2>/dev/null || true)
   if [ -n "$TASK" ]; then
     SPEC_NAME=$(basename "$CURRENT_SPEC")
     CONTEXT_PARTS="Current spec: ${SPEC_NAME}. Next task: ${TASK}."
@@ -45,11 +45,28 @@ if [ -d "$PENDING_DIR" ]; then
   fi
 fi
 
+# Detect Plane ticket from branch name (requires PLANE_ENABLED=1)
+if [ "${PLANE_ENABLED:-}" = "1" ]; then
+  CURRENT_BRANCH=$(git -C "$REPO_ROOT" branch --show-current 2>/dev/null || true)
+  PLANE_TICKET=$(echo "$CURRENT_BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
+  if [ -n "$PLANE_TICKET" ]; then
+    PROJ_ID=$(echo "$PLANE_TICKET" | grep -oE '^[A-Z]+')
+    ISSUE_NUM=$(echo "$PLANE_TICKET" | grep -oE '[0-9]+$')
+    CONTEXT_PARTS="${CONTEXT_PARTS:+$CONTEXT_PARTS }Plane ticket ${PLANE_TICKET} detected from branch. If Plane MCP is available, run retrieve_work_item_by_identifier(project_identifier=\"${PROJ_ID}\", issue_identifier=${ISSUE_NUM}) to load current ticket state."
+  fi
+fi
+
 # Output context if we found anything useful
 if [ -n "$CONTEXT_PARTS" ]; then
-  # Escape for JSON
-  CONTEXT_PARTS=$(printf '%s' "$CONTEXT_PARTS" | sed 's/"/\\"/g' | tr '\n' ' ')
-  echo "{\"additionalContext\": \"Session ${SOURCE}. ${CONTEXT_PARTS} Resume the autonomous development loop from CLAUDE.md Phase 0.\"}"
+  # Build JSON safely
+  MSG="Session ${SOURCE}. ${CONTEXT_PARTS} Resume the autonomous development loop from CLAUDE.md Phase 0."
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$MSG" | jq -Rs '{additionalContext: .}'
+  else
+    # Fallback: escape backslashes, quotes, and control chars
+    ESCAPED=$(printf '%s' "$MSG" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')
+    echo "{\"additionalContext\": \"${ESCAPED}\"}"
+  fi
 fi
 
 exit 0
