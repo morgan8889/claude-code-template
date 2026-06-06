@@ -1,11 +1,10 @@
-export function greet(name: string): string {
-  return `Hello, ${name}!`;
-}
+import "./styles.css";
+import { pipelineStages, renderPipeline, ticket } from "./pipeline";
 
-export function bootstrap() {
+export function bootstrap(): void {
   const root = document.getElementById("app");
   if (root) {
-    root.textContent = greet("World");
+    root.innerHTML = renderPipeline(pipelineStages, ticket);
   }
 }
 
