@@ -1,15 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { bootstrap, greet } from "./main";
-
-describe("greet", () => {
-  it("returns a greeting with the given name", () => {
-    expect(greet("World")).toBe("Hello, World!");
-  });
-
-  it("handles empty string", () => {
-    expect(greet("")).toBe("Hello, !");
-  });
-});
+import { bootstrap } from "./main";
+import { ticket } from "./pipeline";
 
 describe("bootstrap", () => {
   beforeEach(() => {
@@ -28,14 +19,15 @@ describe("bootstrap", () => {
     vi.unstubAllGlobals();
   });
 
-  it("sets textContent on #app element when present", () => {
-    const el = { textContent: "" };
+  it("renders the pipeline proof into the #app element when present", () => {
+    const el = { innerHTML: "" };
     (document.getElementById as ReturnType<typeof vi.fn>).mockReturnValue(el);
 
     bootstrap();
 
     expect(document.getElementById).toHaveBeenCalledWith("app");
-    expect(el.textContent).toBe("Hello, World!");
+    expect(el.innerHTML).toContain("Delivery Pipeline Proof");
+    expect(el.innerHTML).toContain(ticket.id);
   });
 
   it("does nothing when #app element is missing", () => {
