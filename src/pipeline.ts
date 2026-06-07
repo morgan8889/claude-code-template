@@ -93,17 +93,17 @@ const HTML_ESCAPES: Record<string, string> = {
 
 /** Escape text so it is safe to interpolate into HTML. */
 export function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char] ?? char);
+  return value.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
 }
 
 /** Aggregate stage counts and overall completion. */
 export function summarize(stages: PipelineStage[]): PipelineSummary {
-  const done = stages.filter((stage) => stage.status === "done").length;
-  const active = stages.filter((stage) => stage.status === "active").length;
-  const pending = stages.filter((stage) => stage.status === "pending").length;
+  const counts = { done: 0, active: 0, pending: 0 };
+  for (const stage of stages) counts[stage.status]++;
   const total = stages.length;
-  const percentComplete = total === 0 ? 0 : Math.round((done / total) * 100);
-  return { done, active, pending, total, percentComplete };
+  const percentComplete =
+    total === 0 ? 0 : Math.round((counts.done / total) * 100);
+  return { ...counts, total, percentComplete };
 }
 
 const STATUS_LABELS: Record<StageStatus, string> = {
@@ -114,8 +114,8 @@ const STATUS_LABELS: Record<StageStatus, string> = {
 
 /** Render a single stage as a list item. */
 export function renderStage(stage: PipelineStage): string {
-  return `<li class="stage" data-status="${stage.status}">
-  <span class="stage-badge">${STATUS_LABELS[stage.status]}</span>
+  return `<li class="stage" data-status="${escapeHtml(stage.status)}">
+  <span class="stage-badge">${escapeHtml(STATUS_LABELS[stage.status] ?? stage.status)}</span>
   <span class="stage-body">
     <span class="stage-name">${escapeHtml(stage.name)}</span>
     <span class="stage-detail">${escapeHtml(stage.detail)}</span>
